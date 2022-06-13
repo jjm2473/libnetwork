@@ -291,73 +291,7 @@ func (iptable IPTable) RemoveExistingChain(name string, table Table) error {
 
 // Forward adds forwarding rule to 'filter' table and corresponding nat rule to 'nat' table.
 func (c *ChainInfo) Forward(action Action, ip net.IP, port int, proto, destAddr string, destPort int, bridgeName string) error {
-
-	iptable := GetIptable(c.IPTable.Version)
-	daddr := ip.String()
-	if ip.IsUnspecified() {
-		// iptables interprets "0.0.0.0" as "0.0.0.0/32", whereas we
-		// want "0.0.0.0/0". "0/0" is correctly interpreted as "any
-		// value" by both iptables and ip6tables.
-		daddr = "0/0"
-	}
-
-	args := []string{
-		"-p", proto,
-		"-d", daddr,
-		"--dport", strconv.Itoa(port),
-		"-j", "DNAT",
-		"--to-destination", net.JoinHostPort(destAddr, strconv.Itoa(destPort))}
-
-	if !c.HairpinMode {
-		args = append(args, "!", "-i", bridgeName)
-	}
-	if err := iptable.ProgramRule(Nat, c.Name, action, args); err != nil {
-		return err
-	}
-
-	args = []string{
-		"!", "-i", bridgeName,
-		"-o", bridgeName,
-		"-p", proto,
-		"-d", destAddr,
-		"--dport", strconv.Itoa(destPort),
-		"-j", "ACCEPT",
-	}
-	if err := iptable.ProgramRule(Filter, c.Name, action, args); err != nil {
-		return err
-	}
-
-	args = []string{
-		"-p", proto,
-		"-s", destAddr,
-		"-d", destAddr,
-		"--dport", strconv.Itoa(destPort),
-		"-j", "MASQUERADE",
-	}
-
-	if err := iptable.ProgramRule(Nat, "POSTROUTING", action, args); err != nil {
-		return err
-	}
-
-	if proto == "sctp" {
-		// Linux kernel v4.9 and below enables NETIF_F_SCTP_CRC for veth by
-		// the following commit.
-		// This introduces a problem when conbined with a physical NIC without
-		// NETIF_F_SCTP_CRC. As for a workaround, here we add an iptables entry
-		// to fill the checksum.
-		//
-		// https://github.com/torvalds/linux/commit/c80fafbbb59ef9924962f83aac85531039395b18
-		args = []string{
-			"-p", proto,
-			"--sport", strconv.Itoa(destPort),
-			"-j", "CHECKSUM",
-			"--checksum-fill",
-		}
-		if err := iptable.ProgramRule(Mangle, "POSTROUTING", action, args); err != nil {
-			return err
-		}
-	}
-
+	// patch for openwrt
 	return nil
 }
 
