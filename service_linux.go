@@ -411,20 +411,6 @@ func programIngress(gwIP net.IP, ingressPorts []*PortConfig, isDelete bool) erro
 	}()
 
 	for _, iPort := range filteredPorts {
-		if iptable.ExistChain(ingressChain, iptables.Nat) {
-			rule := strings.Fields(fmt.Sprintf("-t nat %s %s -p %s --dport %d -j DNAT --to-destination %s:%d",
-				addDelOpt, ingressChain, strings.ToLower(PortConfig_Protocol_name[int32(iPort.Protocol)]), iPort.PublishedPort, gwIP, iPort.PublishedPort))
-			if portErr = iptable.RawCombinedOutput(rule...); portErr != nil {
-				errStr := fmt.Sprintf("set up rule failed, %v: %v", rule, portErr)
-				if !isDelete {
-					return fmt.Errorf("%s", errStr)
-				}
-				logrus.Infof("%s", errStr)
-			}
-			rollbackRule := strings.Fields(fmt.Sprintf("-t nat %s %s -p %s --dport %d -j DNAT --to-destination %s:%d", rollbackAddDelOpt,
-				ingressChain, strings.ToLower(PortConfig_Protocol_name[int32(iPort.Protocol)]), iPort.PublishedPort, gwIP, iPort.PublishedPort))
-			rollbackRules = append(rollbackRules, rollbackRule)
-		}
 
 		// Filter table rules to allow a published service to be accessible in the local node from..
 		// 1) service tasks attached to other networks
