@@ -362,14 +362,6 @@ func programIngress(gwIP net.IP, ingressPorts []*PortConfig, isDelete bool) erro
 			}
 		}
 
-		for _, chain := range []string{"OUTPUT", "PREROUTING"} {
-			if !iptable.Exists(iptables.Nat, chain, "-m", "addrtype", "--dst-type", "LOCAL", "-j", ingressChain) {
-				if err := iptable.RawCombinedOutput("-t", "nat", "-I", chain, "-m", "addrtype", "--dst-type", "LOCAL", "-j", ingressChain); err != nil {
-					return fmt.Errorf("failed to add jump rule in %s to ingress chain: %v", chain, err)
-				}
-			}
-		}
-
 		if !iptable.Exists(iptables.Filter, "FORWARD", "-j", ingressChain) {
 			if err := iptable.RawCombinedOutput("-I", "FORWARD", "-j", ingressChain); err != nil {
 				return fmt.Errorf("failed to add jump rule to %s in filter table forward chain: %v", ingressChain, err)
